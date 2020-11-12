@@ -14,6 +14,7 @@ const float step = 0.1f;
 //const float step = 0.2f;
 const float halfStep = (step / 2.f);
 const float threshold = 600;
+const int maxFlannResults = 1024;
 const float maxDist = sqrt((step * step) + (step / 2.f) * (step / 2.f));
 
 void loadData(std::vector<Particle> &particles, const std::string &filename) {
@@ -125,7 +126,7 @@ int main(int argc, const char **argv) {
             const cv::Point3f &pointInCube = cube.points.at(j);
             std::vector<float> query = {pointInCube.x, pointInCube.y, pointInCube.z};
             float rho = 0;
-            int n = flannIndex.radiusSearch(query, indices, distances, maxDist, 10 * 1024, cv::flann::SearchParams(256));
+            int n = flannIndex.radiusSearch(query, indices, distances, maxDist, maxFlannResults, cv::flann::SearchParams(256));
             if (n > 0) {
               const int indicesCount = std::min<int>(indices.size(), n);
               for (int i = 0; i < indicesCount; i++) {
@@ -147,7 +148,7 @@ int main(int argc, const char **argv) {
           
 //          window.resetCamera();
           auto cam  = window.getCamera();
-          window.spinOnce(10, true);
+          window.spinOnce(100, true);
           window.removeAllWidgets();
           
           id++;

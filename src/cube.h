@@ -6,10 +6,12 @@
 
 #include <opencv2/core/types.hpp>
 #include <opencv2/viz/viz3d.hpp>
+#include "triangle.h"
 
 
-
+extern const float step;
 extern const float halfStep;
+extern const float threshold;
 
 class Cube {
 public:
@@ -27,6 +29,10 @@ public:
     return points[7];
   }
   
+  void draw(cv::viz::Viz3d &window, const int id);
+  
+  void generateTriangles(std::vector<Triangle> &triangles);
+
 };
 
 
