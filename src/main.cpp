@@ -5,6 +5,13 @@
 #include <opencv2/viz/viz3d.hpp>
 
 #include "particle.h"
+#include "cube.h"
+
+//const float step = 0.0125f;
+const float step = 0.1f;
+//const float step = 0.2f;
+
+const float halfStep = (step / 2.f);
 
 void loadData(std::vector<Particle> &particles, const std::string &filename) {
   std::ifstream file;
@@ -63,6 +70,41 @@ int main(int argc, const char **argv) {
   }
   cv::viz::WCloud myCloud(pointCloud);
   window.showWidget("My cloud", myCloud);
+  
+  while (!window.wasStopped()) {
+    cv::Point3d marchingMax = min + cv::Point3d(step, step, step);
+    id = 0;
+    
+    for (int x = 0; x < 1. / step; x++) {
+      marchingMax.y = min.y + step;
+      for (int y = 0; y < 1. / step; y++) {
+        marchingMax.z = min.z + step;
+        for (int z = 0; z < 1. / step; z++) {
+          std::stringstream ss;
+          ss << "Cube " << id;
+          
+          Cube cube(marchingMax);
+          
+          window.showWidget("Cube widget", mainCube);
+          
+          cv::viz::WCube marchingCube(cube.getMin(), cube.getMax(), true, cv::viz::Color::blue());
+          window.showWidget(ss.str(), marchingCube);
+          window.showWidget("My cloud", myCloud);
+          
+          window.spinOnce(1, true);
+          window.removeAllWidgets();
+          
+          id++;
+          marchingMax.z += step;
+        }
+        marchingMax.y += step;
+      }
+      marchingMax.x += step;
+    }
+  }
+  window.showWidget("My cloud", myCloud);
+  
+  
   window.spin();
   return 0;
 }
