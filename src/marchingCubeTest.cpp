@@ -11,7 +11,7 @@
 #include "wtriangle.h"
 
 //const float step = 0.0125f;
-const float step = 0.1f;
+const float step = .9f;
 //const float step = 0.2f;
 const float halfStep = (step / 2.f);
 const float threshold = 600;
@@ -70,9 +70,20 @@ int main(int argc, const char **argv) {
   window.setWindowSize(cv::Size_(500,500));
 //  window.setViewerPose(cam_pose);
   
-  Cube cube(cv::Point3f(0, 0, 0));
+  window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem());
+
+
+  Cube cube(cv::Point3f(1, 1, 1));
+  window.spinOnce(100, true);
   cube.values[0] = threshold * 2;
   cube.values[1] = threshold * 2;
+  cube.values[2] = threshold * 2;
+  cube.values[3] = threshold * 2;
+//  cube.values[4] = threshold * 2;
+  cube.values[5] = threshold * 2;
+//  cube.values[6] = threshold * 2;
+  cube.values[7] = threshold * 2;
+
   cube.draw(window, 0);
   
   std::vector<Triangle> triangles;
@@ -81,7 +92,7 @@ int main(int argc, const char **argv) {
   for (const Triangle& t : triangles) {
     std::stringstream ss;
     ss << "Triangle" << idx++;
-  
+
     cv::viz::WTriangle wtriangle(t);
     window.showWidget(ss.str(), wtriangle);
   }

@@ -22,11 +22,11 @@ public:
   cv::Point3f center;
   
   inline cv::Point3f getMax() const {
-    return points[1];
+    return points[0];
   }
   
   inline cv::Point3f getMin() const {
-    return points[7];
+    return points[6];
   }
   
   void draw(cv::viz::Viz3d &window, const int id);
