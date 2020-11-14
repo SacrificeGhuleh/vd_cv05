@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 
 #include <opencv2/viz/widgets.hpp>
 #include <opencv2/viz/viz3d.hpp>
@@ -11,19 +12,24 @@
 #include "wtriangle.h"
 #include "timer.h"
 
-//const float step = 0.0125f;
+const float step = 0.0125f;
+//const float step = 0.025f;
+//const float step = 0.05f;
 //const float step = 0.1f;
-const float step = 0.2f;
+//const float step = 0.2f;
 //const float step = 0.5f;
 const float halfStep = (step / 2.f);
-const float threshold = 0.5f;
-const int maxFlannResults = 1024;
+const float threshold = 600.f;
+const int maxFlannResults = 128;
 const float maxDist = sqrt((step * step) + (step / 2.f) * (step / 2.f));
+
+const float smoothingLength = 0.055;
 
 cv::Mat sliceMat(cv::Mat L, int dim, std::vector<int> _sz) {
   cv::Mat M(L.dims - 1, std::vector<int>(_sz.begin() + 1, _sz.end()).data(), CV_32FC1, L.data + L.step[0] * 0);
   return M;
 }
+
 
 void loadData(std::vector<Particle> &particles, const std::string &filename) {
   std::ifstream file;
@@ -63,6 +69,35 @@ T gaussianKernel(const T &r, const T &h) {
   return ret;
 }
 
+
+template<class T>
+T cubicSplineKernel(const T &r, const T &h) {
+  T q = r / h;
+  T ret;
+  if (q < 1 && q >= 0) {
+    ret = (2. / 3.) - (q * q) + ((1. / 2.) * (q * q * q));
+  } else if (q < 2 && q >= 1) {
+    ret = 2. - q;
+    ret = ret * ret * ret;
+    ret *= (1. / 6.);
+  } else {
+    ret = 0;
+  }
+  return (3. / (2. * M_PI * (h * h * h))) * ret;
+}
+
+struct Point3fHash {
+  size_t operator()(const cv::Point3f &x) const noexcept {
+    size_t seed = 0;
+    constexpr uint32_t GOLDEN_RATIO = 0x9e3779b9;
+    seed ^= std::hash<float>()(x.x) + GOLDEN_RATIO + (seed << 6) + (seed >> 2);
+    seed ^= std::hash<float>()(x.y) + GOLDEN_RATIO + (seed << 6) + (seed >> 2);
+    seed ^= std::hash<float>()(x.z) + GOLDEN_RATIO + (seed << 6) + (seed >> 2);
+    
+    return seed;
+  }
+};
+
 int main(int argc, const char **argv) {
   const cv::Point3d min(-0.5f, -0.5f, 0.f);
   const cv::Point3d max(0.5f, 0.5f, 1.f);
@@ -74,7 +109,7 @@ int main(int argc, const char **argv) {
   
   cv::viz::Viz3d window = cv::viz::Viz3d("Marching cubes");
   window.setWindowSize(cv::Size_(500, 500));
-//  window.setViewerPose(cam_pose);
+  window.setViewerPose(cam_pose);
   
   cv::viz::WCube mainCube(min, max, true, cv::viz::Color::blue());
   mainCube.setRenderingProperty(cv::viz::LINE_WIDTH, 4.0);
@@ -82,14 +117,17 @@ int main(int argc, const char **argv) {
   window.showWidget("Cube widget", mainCube);
   
   std::vector<Particle> particles;
+  Timer loadDataTimer;
   loadData(particles, "./data/sph_001100.bin");
+  double loadTime = loadDataTimer.elapsed();
   
   Timer flannTimer;
+//  cv::Mat3f pointCloud(1, 64000);
   
   auto samplePoints = cv::Mat1f(64000, 3);
   int id = 0;
   for (const Particle &particle : particles) {
-    pointCloud.at<cv::Vec3f>(id) = cv::Vec3f(particle.position_x, particle.position_y, particle.position_z);
+//    pointCloud.at<cv::Vec3f>(id) = cv::Vec3f(particle.position_x, particle.position_y, particle.position_z);
     
     samplePoints.at<float>(id, 0) = particle.position_x;
     samplePoints.at<float>(id, 1) = particle.position_y;
@@ -108,92 +146,71 @@ int main(int argc, const char **argv) {
   int sizes[] = {static_cast<int>(1.f / step) + 1, static_cast<int>(1.f / step) + 1, static_cast<int>(1.f / step) + 1};
   cv::Mat1f edgesValues(3, sizes);
   
-  id = 0;
-  Timer marchingTimer;
-  cv::Point3f marchingMax = min + cv::Point3d(step, step, step);
-  for (int x = 0; x <= 1. / step; x++) {
-    marchingMax.y = min.y + step;
-    for (int y = 0; y <= 1. / step; y++) {
-      marchingMax.z = min.z + step;
-      for (int z = 0; z <= 1. / step; z++) {
-        int idx[] = {x, y, z};
-        
-        std::vector<int> indices;
-        std::vector<float> distances;
-        std::vector<float> query = {marchingMax.x, marchingMax.y, marchingMax.z};
-        
-        float rho = 0;
-        int n = flannIndex.radiusSearch(query, indices, distances, maxDist, maxFlannResults, cv::flann::SearchParams(256));
-        if (n > 0) {
-          const int indicesCount = std::min<int>(indices.size(), n);
-          for (int i = 0; i < indicesCount; i++) {
-            const float distance = distances.at(i);
-            const int indice = indices.at(i);
-            const Particle &particle = particles.at(indice);
-            rho += particle.rho * gaussianKernel(distance, maxDist);
-          }
-        }
-        edgesValues.at<float>(idx) = rho;
-        id++;
-        marchingMax.z += step;
-      }
-      marchingMax.y += step;
-    }
-    marchingMax.x += step;
-  }
-
-
-//  cv::normalize(edgesValues, edgesValues, 0, 1, cv::NORM_MINMAX);
-  
-  std::cout << "Vertices sampled" << std::endl;
-
-//  std::vector<int> vectSizes = {static_cast<int>(1.f/step)+1,static_cast<int>(1.f/step)+1,static_cast<int>(1.f/step)+1};
-//
-//  for(int i = 0; i < vectSizes.at(0); i++){
-//    std::cout << sliceMat(edgesValues, i, vectSizes) << std::endl;
-//  }
   
   std::vector<Triangle> triangles;
+  std::unordered_map<cv::Point3f, float, Point3fHash> valuesMap;
   
-  marchingMax = min + cv::Point3d(step, step, step);
+  Timer marchingTimer;
+  
+  size_t unorderedMapHits = 0;
+  size_t unorderedMapNotHits = 0;
+  cv::Point3f marchingMax = min + cv::Point3d(step, step, step);
   id = 0;
-  for (int x = 0; x < 1. / step; x++) {
+  const int iterations = static_cast<int>(1. / step);
+  for (int x = 0; x < iterations; x++) {
     marchingMax.y = min.y + step;
-    for (int y = 0; y < 1. / step; y++) {
+    for (int y = 0; y < iterations; y++) {
       marchingMax.z = min.z + step;
-      for (int z = 0; z < 1. / step; z++) {
+      for (int z = 0; z < iterations; z++) {
         std::stringstream ss;
         ss << "Sphere " << id;
         
         Cube cube(marchingMax);
         
-        int pts[8][3] = {
-            {x + 1 - 1, y + 1 - 1, y + 1 - 1},
-            {x + 1 - 1, y + 1 - 0, y + 1 - 1},
-            {x + 1 - 0, y + 1 - 0, y + 1 - 1},
-            {x + 1 - 0, y + 1 - 1, y + 1 - 1},
-            {x + 1 - 1, y + 1 - 1, y + 1 - 0},
-            {x + 1 - 1, y + 1 - 0, y + 1 - 0},
-            {x + 1 - 0, y + 1 - 0, y + 1 - 0},
-            {x + 1 - 0, y + 1 - 1, y + 1 - 0}
-        };
-        
-        for (int i = 0; i < 8; i++) {
-          cube.values.at(i) = edgesValues.at<float>(pts[i]);
+        for (int ptIdx = 0; ptIdx < 8; ptIdx++) {
+          const cv::Point3f &pt = cube.points.at(ptIdx);
+          const auto it = valuesMap.find(pt);
+          
+          if (it != valuesMap.end()) {
+            unorderedMapHits++;
+            cube.values.at(ptIdx) = it->second;
+          } else {
+            unorderedMapNotHits++;
+            std::vector<int> indices;
+            std::vector<float> distances;
+            std::vector<float> query = {pt.x, pt.y, pt.z};
+            
+            float rho = 0;
+            int n = flannIndex.radiusSearch(query, indices, distances, maxDist, maxFlannResults, cv::flann::SearchParams(256));
+            if (n > 0) {
+              const int indicesCount = std::min<int>(indices.size(), n);
+              for (int indiceIdx = 0; indiceIdx < indicesCount; indiceIdx++) {
+                const float distance = distances.at(indiceIdx);
+                const int indice = indices.at(indiceIdx);
+                const Particle &particle = particles.at(indice);
+//                rho += particle.rho * cubicSplineKernel(distance, smoothingLength);
+                rho += particle.getMass() * cubicSplineKernel(distance, smoothingLength);
+              }
+            }
+            cube.values.at(ptIdx) = rho;
+            valuesMap.insert(std::make_pair(pt, rho));
+          }
         }
-        
         cube.generateTriangles(triangles);
-        
-        cube.draw(window, id);
+//        cube.draw(window, id);
         
         id++;
         marchingMax.z += step;
       }
       marchingMax.y += step;
     }
+    std::cout << "computed " << static_cast<float>(x) / static_cast<float>(iterations) * 100.f << "%\n";
     marchingMax.x += step;
   }
   double marchingTime = marchingTimer.elapsed();
+  
+  std::cout << "Unordered map reused: " << unorderedMapHits << std::endl;
+  std::cout << "Unordered map unique: " << unorderedMapNotHits << std::endl;
   
   std::cout << "Cubes generated" << std::endl;
   
@@ -213,7 +230,14 @@ int main(int argc, const char **argv) {
   std::cout << "     Flann | " << flannTime << "\n";
   std::cout << "  Marching | " << marchingTime << "\n";
   std::cout << "    Render | " << renderTime << "\n";
+
+//  for (auto const &pair: valuesMap) {
+//    std::cout << "{" << pair.first << ": " << pair.second << "}\n";
+//  }
   
-  window.spin();
+  window.spinOnce(1, true);
+  window.saveScreenshot("output.jpg");
+
+//  window.spin();
   return 0;
 }

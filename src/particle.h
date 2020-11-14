@@ -19,6 +19,14 @@ struct Particle {
   half_float::half rho; // density (kg/m3)
   half_float::half pressure;
   half_float::half radius; // particle radius (m)
+  
+  inline double getVolume() const {
+    return (4. / 3.) * M_PI * (radius * radius * radius);
+  }
+  
+  inline double getMass() const {
+    return rho * getVolume();
+  }
 };
 
 
