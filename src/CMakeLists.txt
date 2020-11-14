@@ -6,7 +6,7 @@ SET(OpenCV_LIBS opencv_core opencv_imgproc opencv_highgui opencv_imgcodecs openc
 SET(SRC main.cpp cube.h cube.cpp particle.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h)
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRC} cli.h colors.h)
-ADD_EXECUTABLE(MarchingCubeTest marchingCubeTest.cpp cube.h cube.cpp particle.h cli.h colors.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h)
+ADD_EXECUTABLE(MarchingCubeTest marchingcubetest.cpp cube.h cube.cpp particle.h cli.h colors.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h)
 
 find_package(OpenMP REQUIRED)
 
