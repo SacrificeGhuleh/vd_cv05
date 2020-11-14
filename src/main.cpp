@@ -9,6 +9,7 @@
 #include "particle.h"
 #include "cube.h"
 #include "wtriangle.h"
+#include "timer.h"
 
 //const float step = 0.0125f;
 //const float step = 0.1f;
@@ -83,7 +84,7 @@ int main(int argc, const char **argv) {
   std::vector<Particle> particles;
   loadData(particles, "./data/sph_001100.bin");
   
-  cv::Mat3f pointCloud(1, 64000);
+  Timer flannTimer;
   
   auto samplePoints = cv::Mat1f(64000, 3);
   int id = 0;
@@ -98,7 +99,7 @@ int main(int argc, const char **argv) {
   }
   
   cv::flann::Index flannIndex = cv::flann::Index(samplePoints, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_L2);
-  
+  double flannTime = flannTimer.elapsed();
   std::cout << "flann built" << std::endl;
 
 //  cv::viz::WCloud myCloud(pointCloud);
@@ -108,6 +109,7 @@ int main(int argc, const char **argv) {
   cv::Mat1f edgesValues(3, sizes);
   
   id = 0;
+  Timer marchingTimer;
   cv::Point3f marchingMax = min + cv::Point3d(step, step, step);
   for (int x = 0; x <= 1. / step; x++) {
     marchingMax.y = min.y + step;
@@ -191,16 +193,26 @@ int main(int argc, const char **argv) {
     }
     marchingMax.x += step;
   }
+  double marchingTime = marchingTimer.elapsed();
   
   std::cout << "Cubes generated" << std::endl;
   
-  
+  Timer renderTimer;
   int idx = 0;
   for (const Triangle &t : triangles) {
     std::stringstream ss;
     ss << "Triangle " << idx++;
     window.showWidget(ss.str(), cv::viz::WTriangle(t));
   }
+  double renderTime = renderTimer.elapsed();
+  
+  std::cout << "Marching cubes benchmark\n";
+  std::cout << "      Step | " << step << "\n";
+  std::cout << "---------- |\n";
+  std::cout << "   Loading | " << loadTime << "\n";
+  std::cout << "     Flann | " << flannTime << "\n";
+  std::cout << "  Marching | " << marchingTime << "\n";
+  std::cout << "    Render | " << renderTime << "\n";
   
   window.spin();
   return 0;
