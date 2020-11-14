@@ -12,8 +12,12 @@
 cv::Point3f lerp(const cv::Point3f &p1, const cv::Point3f &p2, float d1, float d2) {
   float t = (threshold - d1) / (d2 - d1);
   return p1 + t * (p2 - p1);
-  
-  return (p1 + p2) / 2;
+//
+//  if (std::abs(d1) < 0.000001) return p1;
+//  if (std::abs(d2) < 0.000001) return p2;
+//  if (std::abs(d1 - d2) < 0.000001) return p1;
+//
+  return p1 + (-1 * d1) * (p2 - p1) / (d2 - d1);
 }
 
 
