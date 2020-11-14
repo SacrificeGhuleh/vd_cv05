@@ -10,13 +10,10 @@
 
 
 cv::Point3f lerp(const cv::Point3f &p1, const cv::Point3f &p2, float d1, float d2) {
-//  if (std::abs(d1) < 0.000001) return p1;
-//  if (std::abs(d2) < 0.000001) return p2;
-//  if (std::abs(d1 - d2) < 0.000001) return p1;
-//
-//  return p1 + (-1 * d1) * (p2 - p1) / (d2 - d1);
-
-  return (p1+p2)/2;
+  float t = (threshold - d1) / (d2 - d1);
+  return p1 + t * (p2 - p1);
+  
+  return (p1 + p2) / 2;
 }
 
 
@@ -24,13 +21,13 @@ Cube::Cube(const cv::Point3f &max) : center(static_cast<float>(max.x - halfStep)
                                             static_cast<float>(max.y - halfStep),
                                             static_cast<float>(max.z - halfStep)) {
   cv::Point3f p0(center.x - halfStep, center.y - halfStep, center.z - halfStep);
-  cv::Point3f p1(center.x + halfStep, center.y - halfStep, center.z - halfStep);
-  cv::Point3f p2(center.x + halfStep, center.y - halfStep, center.z + halfStep);
-  cv::Point3f p3(center.x - halfStep, center.y - halfStep, center.z + halfStep);
-  cv::Point3f p4(center.x - halfStep, center.y + halfStep, center.z - halfStep);
-  cv::Point3f p5(center.x + halfStep, center.y + halfStep, center.z - halfStep);
+  cv::Point3f p1(center.x - halfStep, center.y + halfStep, center.z - halfStep);
+  cv::Point3f p2(center.x + halfStep, center.y + halfStep, center.z - halfStep);
+  cv::Point3f p3(center.x + halfStep, center.y - halfStep, center.z - halfStep);
+  cv::Point3f p4(center.x - halfStep, center.y - halfStep, center.z + halfStep);
+  cv::Point3f p5(center.x - halfStep, center.y + halfStep, center.z + halfStep);
   cv::Point3f p6(center.x + halfStep, center.y + halfStep, center.z + halfStep);
-  cv::Point3f p7(center.x - halfStep, center.y + halfStep, center.z + halfStep);
+  cv::Point3f p7(center.x + halfStep, center.y - halfStep, center.z + halfStep);
   
   points = {p0, p1, p2, p3, p4, p5, p6, p7};
   values = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -48,20 +45,20 @@ void Cube::draw(cv::viz::Viz3d &window, const int id) {
   ss << " Vertex";
   for (int i = 0; i < 8; i++) {
     if (values[i] > threshold) {
-    std::stringstream ssid;
-    ssid << ss.str() << i;
-    
-    window.showWidget(ssid.str(), cv::viz::WSphere(points[i], step / 20.f));
+      std::stringstream ssid;
+      ssid << ss.str() << i;
+      
+      window.showWidget(ssid.str(), cv::viz::WSphere(points[i], step / 20.f, 10, cv::viz::Color(values[i])));
 //    cv::waitKey(1000);
 //    window.spinOnce(1,true);
-  
+    
     }
   }
 }
 
 void Cube::generateTriangles(std::vector<Triangle> &triangles) {
   
-  int idx = 0;
+  unsigned int idx = 0;
   
   if (values[0] > threshold) idx |= 1;
   if (values[1] > threshold) idx |= 2;
@@ -71,22 +68,22 @@ void Cube::generateTriangles(std::vector<Triangle> &triangles) {
   if (values[5] > threshold) idx |= 32;
   if (values[6] > threshold) idx |= 64;
   if (values[7] > threshold) idx |= 128;
-  
+
 //  int numTriangles = 0;
 //  for (int i = 0; triTable[idx][i] != -1; i += 3) numTriangles++;
   
-  for (int i = 0; triTable[idx][i] != -1; i += 3){
-    int a0 = cornerIndexAFromEdge[triTable[idx][i]];
-    int b0 = cornerIndexBFromEdge[triTable[idx][i]];
-  
-    int a1 = cornerIndexAFromEdge[triTable[idx][i+1]];
-    int b1 = cornerIndexBFromEdge[triTable[idx][i+1]];
-  
-    int a2 = cornerIndexAFromEdge[triTable[idx][i+2]];
-    int b2 = cornerIndexBFromEdge[triTable[idx][i+2]];
+  for (int i = 0; triTable[idx][i] != -1; i += 3) {
+    unsigned int a0 = cornerIndexAFromEdge[triTable[idx][i]];
+    unsigned int b0 = cornerIndexBFromEdge[triTable[idx][i]];
+    
+    unsigned int a1 = cornerIndexAFromEdge[triTable[idx][i + 1]];
+    unsigned int b1 = cornerIndexBFromEdge[triTable[idx][i + 1]];
+    
+    unsigned int a2 = cornerIndexAFromEdge[triTable[idx][i + 2]];
+    unsigned int b2 = cornerIndexBFromEdge[triTable[idx][i + 2]];
     
     Triangle triangle;
-  
+    
     triangle.v1 = lerp(points[a0], points[b0], values[a0], values[b0]);
     triangle.v2 = lerp(points[a1], points[b1], values[a1], values[b1]);
     triangle.v3 = lerp(points[a2], points[b2], values[a2], values[b2]);
