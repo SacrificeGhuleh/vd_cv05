@@ -11,9 +11,11 @@
 #include "cube.h"
 #include "wtriangle.h"
 #include "timer.h"
+#include "wsurface.h"
 
-const float step = 0.0125f;
-//const float step = 0.025f;
+//const float step = 0.00625f;
+//const float step = 0.0125f;
+const float step = 0.025f;
 //const float step = 0.05f;
 //const float step = 0.1f;
 //const float step = 0.2f;
@@ -23,7 +25,7 @@ const float threshold = 600.f;
 const int maxFlannResults = 128;
 const float maxDist = sqrt((step * step) + (step / 2.f) * (step / 2.f));
 
-const float smoothingLength = 0.055;
+const float smoothingLength = 0.055f;
 
 cv::Mat sliceMat(cv::Mat L, int dim, std::vector<int> _sz) {
   cv::Mat M(L.dims - 1, std::vector<int>(_sz.begin() + 1, _sz.end()).data(), CV_32FC1, L.data + L.step[0] * 0);
@@ -99,6 +101,14 @@ struct Point3fHash {
 };
 
 int main(int argc, const char **argv) {
+  std::string filename;
+  if (argc == 1) {
+    filename = "data/sph_001100.bin";
+  } else {
+    filename = argv[1];
+  }
+  
+  std::string outFileName = "out/" + filename + ".jpg";
   const cv::Point3d min(-0.5f, -0.5f, 0.f);
   const cv::Point3d max(0.5f, 0.5f, 1.f);
   
@@ -118,7 +128,7 @@ int main(int argc, const char **argv) {
   
   std::vector<Particle> particles;
   Timer loadDataTimer;
-  loadData(particles, "./data/sph_001100.bin");
+  loadData(particles, filename);
   double loadTime = loadDataTimer.elapsed();
   
   Timer flannTimer;
@@ -215,12 +225,16 @@ int main(int argc, const char **argv) {
   std::cout << "Cubes generated" << std::endl;
   
   Timer renderTimer;
-  int idx = 0;
-  for (const Triangle &t : triangles) {
-    std::stringstream ss;
-    ss << "Triangle " << idx++;
-    window.showWidget(ss.str(), cv::viz::WTriangle(t));
-  }
+//  int idx = 0;
+//  for (const Triangle &t : triangles) {
+//    std::stringstream ss;
+//    ss << "Triangle " << idx++;
+//    window.showWidget(ss.str(), cv::viz::WTriangle(t));
+//  }
+  
+  window.showWidget("MySurface", cv::viz::WSurface(triangles));
+  
+  
   double renderTime = renderTimer.elapsed();
   
   std::cout << "Marching cubes benchmark\n";
@@ -236,7 +250,7 @@ int main(int argc, const char **argv) {
 //  }
   
   window.spinOnce(1, true);
-  window.saveScreenshot("output.jpg");
+  window.saveScreenshot(outFileName);
 
 //  window.spin();
   return 0;

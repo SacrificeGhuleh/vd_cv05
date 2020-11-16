@@ -9,6 +9,7 @@
 #include "cube.h"
 #include "triangle.h"
 #include "wtriangle.h"
+#include "wsurface.h"
 
 //const float step = 0.0125f;
 const float step = .9f;
@@ -151,21 +152,23 @@ int main(int argc, const char **argv) {
   generateCubes(cubes);
   
   int cubeIdx = 0;
+  std::vector<Triangle> triangles;
   for (Cube &c : cubes) {
     c.draw(window, cubeIdx);
-    std::vector<Triangle> triangles;
     c.generateTriangles(triangles);
-    int idx = 0;
-    for (const Triangle &t : triangles) {
-      std::stringstream ss;
-      ss << cubeIdx << "Triangle" << idx++;
-      
-      cv::viz::WTriangle wtriangle(t);
-      window.showWidget(ss.str(), wtriangle);
-//      window.spinOnce(1, true);
-    }
+//    int idx = 0;
+//    for (const Triangle &t : triangles) {
+//      std::stringstream ss;
+//      ss << cubeIdx << "Triangle" << idx++;
+//
+//      cv::viz::WTriangle wtriangle(t);
+//      window.showWidget(ss.str(), wtriangle);
+////      window.spinOnce(1, true);
+//    }
     cubeIdx++;
   }
+  
+  window.showWidget("MySurface", cv::viz::WSurface(triangles));
 
 
 //  Cube cube(cv::Point3f(1, 1, 1));

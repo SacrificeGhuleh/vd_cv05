@@ -3,10 +3,10 @@ project(CV05)
 
 # add libs you need
 set(OpenCV_LIBS opencv_core opencv_imgproc opencv_highgui opencv_imgcodecs opencv_calib3d opencv_viz)
-set(SRC main.cpp cube.h cube.cpp particle.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h timer.h)
+set(SRC cli.h colors.h cube.h cube.cpp particle.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h timer.h wsurface.cpp wsurface.h)
 
-add_executable(${PROJECT_NAME} ${SRC} cli.h colors.h)
-add_executable(MarchingCubeTest marchingcubetest.cpp cube.h cube.cpp particle.h cli.h colors.h triangle.h wtriangle.cpp wtriangle.h marchingcubestables.h timer.h)
+add_executable(${PROJECT_NAME} ${SRC} main.cpp)
+add_executable(MarchingCubeTest ${SRC} marchingcubetest.cpp)
 
 find_package(OpenMP REQUIRED)
 
