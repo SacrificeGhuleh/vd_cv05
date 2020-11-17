@@ -225,15 +225,12 @@ int main(int argc, const char **argv) {
   std::cout << "Cubes generated" << std::endl;
   
   Timer renderTimer;
-//  int idx = 0;
-//  for (const Triangle &t : triangles) {
-//    std::stringstream ss;
-//    ss << "Triangle " << idx++;
-//    window.showWidget(ss.str(), cv::viz::WTriangle(t));
-//  }
   
   window.showWidget("MySurface", cv::viz::WSurface(triangles));
   
+  window.spinOnce(1, true);
+  window.saveScreenshot(outFileName);
+//  window.spin();
   
   double renderTime = renderTimer.elapsed();
   
@@ -244,14 +241,7 @@ int main(int argc, const char **argv) {
   std::cout << "     Flann | " << flannTime << "\n";
   std::cout << "  Marching | " << marchingTime << "\n";
   std::cout << "    Render | " << renderTime << "\n";
-
-//  for (auto const &pair: valuesMap) {
-//    std::cout << "{" << pair.first << ": " << pair.second << "}\n";
-//  }
   
-  window.spinOnce(1, true);
-  window.saveScreenshot(outFileName);
-
-//  window.spin();
+  
   return 0;
 }
